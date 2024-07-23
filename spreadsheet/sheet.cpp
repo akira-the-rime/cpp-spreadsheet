@@ -23,44 +23,47 @@ namespace detail {
 
 Sheet::~Sheet() noexcept = default;
 
-void Sheet::ClearCell(Position pos) {
+void Sheet::CheckPositionValidity(Position pos) const {
     if (!pos.IsValid()) {
         throw InvalidPositionException("Invalid position");
     }
+}
 
-    if (spreadsheet_.count(pos) && spreadsheet_.at(pos) != nullptr) {
-        spreadsheet_.at(pos)->Clear();
+void Sheet::ClearCell(Position pos) {
+    CheckPositionValidity(pos);
+    auto taken_cell = spreadsheet_.find(pos);
 
-        if (spreadsheet_.at(pos)->HasUpperLevel()) {
+    if (taken_cell != spreadsheet_.end() && taken_cell->second != nullptr) {
+        taken_cell->second->Clear();
+
+        if (taken_cell->second->HasUpperLevel()) {
             return;
         }
 
-        spreadsheet_.at(pos).reset(nullptr);
+        taken_cell->second.reset(nullptr);
     }
 }
 
 const CellInterface* Sheet::GetCell(Position pos) const {
-    if (!pos.IsValid()) {
-        throw InvalidPositionException("Invalid position");
-    }
+    CheckPositionValidity(pos);
+    auto taken_cell = spreadsheet_.find(pos);
 
-    if (!spreadsheet_.count(pos)) {
+    if (taken_cell == spreadsheet_.end()) {
         return nullptr;
     }
 
-    return spreadsheet_.at(pos).get();
+    return taken_cell->second.get();
 }
 
 CellInterface* Sheet::GetCell(Position pos) {
-    if (!pos.IsValid()) {
-        throw InvalidPositionException("Invalid position");
-    }
+    CheckPositionValidity(pos);
+    auto taken_cell = spreadsheet_.find(pos);
 
-    if (!spreadsheet_.count(pos)) {
+    if (taken_cell == spreadsheet_.end()) {
         return nullptr;
     }
 
-    return spreadsheet_.at(pos).get();
+    return taken_cell->second.get();
 }
 
 Size Sheet::GetPrintableSize() const noexcept {
@@ -93,8 +96,10 @@ void Sheet::PrintTexts(std::ostream& output) const noexcept {
         for (int j = 0; j < size.cols; ++j) {
             Position pos = { i, j };
 
-            if (spreadsheet_.count(pos) && spreadsheet_.at(pos) != nullptr) {
-                output << spreadsheet_.at(pos)->GetText();
+            auto taken_cell = spreadsheet_.find(pos);
+
+            if (taken_cell != spreadsheet_.end() && taken_cell->second != nullptr) {
+                output << taken_cell->second->GetText();
             }
 
             if (j != size.cols - 1) {
@@ -113,13 +118,15 @@ void Sheet::PrintValues(std::ostream& output) const {
         for (int j = 0; j < size.cols; ++j) {
             Position pos = { i, j };
 
-            if (spreadsheet_.count(pos) && spreadsheet_.at(pos) != nullptr) {
+            auto taken_cell = spreadsheet_.find(pos);
+
+            if (taken_cell != spreadsheet_.end() && taken_cell->second != nullptr) {
                 detail::Visitor visitor;
 
-                std::visit([&visitor, &output](auto&& value) {
+                std::visit([&output, &taken_cell, &visitor](auto&& value) {
                     visitor(output, value);
                 },
-                    spreadsheet_.at(pos)->GetValue());
+                    taken_cell->second->GetValue());
             }
 
             if (j != size.cols - 1) {
@@ -132,9 +139,7 @@ void Sheet::PrintValues(std::ostream& output) const {
 }
 
 void Sheet::SetCell(Position pos, std::string text) {
-    if (!pos.IsValid()) {
-        throw InvalidPositionException("Invalid position");
-    }
+    CheckPositionValidity(pos);
 
     if (!spreadsheet_.count(pos)) {
         spreadsheet_.emplace(pos, std::make_unique<Cell>(*this));

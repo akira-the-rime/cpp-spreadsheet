@@ -38,5 +38,6 @@ public:
     void SetCell(Position pos, std::string text) override;
 
 private:
+    void CheckPositionValidity(Position pos) const;
     std::unordered_map<Position, std::unique_ptr<Cell>, PosHasher, PosComparator> spreadsheet_;
 };

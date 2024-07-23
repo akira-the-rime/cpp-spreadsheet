@@ -1,5 +1,4 @@
 #include <deque>
-#include <new>
 #include <utility>
 
 #include "cell.h"
@@ -12,7 +11,7 @@ Cell::Cell(Sheet& spreadsheet)
 Cell::~Cell() noexcept = default;
 
 void Cell::Clear() noexcept {
-    impl_.reset(new detail::EmptyImpl(""));
+    impl_ = std::make_unique<detail::EmptyImpl>("");
 }
 
 std::vector<Position> Cell::GetReferencedCells() const {
@@ -35,17 +34,19 @@ void Cell::Set(std::string text) {
     bool update_statement = true;
 
     if ((text.size() == 1 && (text.front() == ESCAPE_SIGN || text.front() == FORMULA_SIGN)) || text.empty()) {
-        impl_.reset(new detail::EmptyImpl(std::move(text)));
+        impl_ = std::make_unique< detail::EmptyImpl>(std::move(text));
     }
     else if (text.front() == FORMULA_SIGN) {
-        std::unique_ptr<detail::Impl> being_considered_impl(new detail::FormulaImpl(std::move(text), spreadsheet_));
+        std::unique_ptr<detail::Impl> being_considered_impl = std::make_unique<detail::FormulaImpl>(std::move(text), spreadsheet_);
 
         if (this->impl_ != nullptr && (impl_->GetText() == being_considered_impl->GetText())) {
             update_statement = false;
         }
 
         if (update_statement) {
-            if (!being_considered_impl->GetReferencedCells().empty() && CheckOnCyclicDependency(being_considered_impl.get())) {
+            if (!being_considered_impl->GetReferencedCells().empty() 
+                && CheckOnCyclicDependency(being_considered_impl.get())) {
+
                 throw CircularDependencyException("Cyclic dependency was met.");
             }
 
@@ -53,7 +54,7 @@ void Cell::Set(std::string text) {
         }
     }
     else {
-        impl_.reset(new detail::TextImpl(std::move(text)));
+        impl_ = std::make_unique<detail::TextImpl>(std::move(text));
     }
 
     if (update_statement) {
