@@ -261,7 +261,7 @@ namespace {
                 ASSERT(false);
             }
             catch (const FormulaException&) {
-                // we expect this one
+                // exception is expected
             }
         };
 
@@ -348,7 +348,7 @@ namespace {
         ASSERT(caught);
         ASSERT_EQUAL(sheet->GetCell("M6"_pos)->GetText(), "Ready");
     }
-} // namespace
+} // unnamed namespace
 
 int main() {
     TestRunner tr;

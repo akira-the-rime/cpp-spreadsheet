@@ -23,7 +23,7 @@ namespace TestRunnerPrivate {
     }
     return os << "}";
   }
-}
+} // namespace TestRunnerPrivate
 
 template <class T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& s) {
